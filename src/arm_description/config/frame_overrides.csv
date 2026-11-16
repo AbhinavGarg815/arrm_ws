@@ -1,0 +1,9 @@
+link,parent_joint,joint_type,rule,original_roll_deg,original_pitch_deg,original_yaw_deg,post_roll_deg,post_pitch_deg,post_yaw_deg,role
+Finger_Moving,Slider_39,prismatic,keep,8.235836,10.590827,116.052772,8.235836,10.590827,116.052772,unchanged
+Link1_Shoulder,joint1,continuous,auto,-85.692312,0.497613,-88.905572,-90.517439,0.009194,1.017887,revolute_axis_z
+Link2_UpperArm,joint2,continuous,auto,-45.043191,-8.340828,3.717065,-72.475758,75.555429,-71.940338,revolute_axis_z
+Link3_ForeArm,joint3,continuous,auto,-85.055426,-29.375586,-91.373109,107.524239,75.555425,-71.940340,revolute_axis_z
+Link4_Wrist1,joint4,continuous,auto,-92.003886,78.386395,-82.258084,-29.540235,-3.716603,2.103777,revolute_axis_z
+Link5_Wrist2,joint5,continuous,auto,-126.137054,-68.590798,44.192917,-90.403666,-2.356944,-80.278589,revolute_axis_z
+Link6_Gripper,joint6,continuous,auto,82.975327,-74.521429,31.567331,-102.439595,2.119345,9.516978,revolute_axis_z
+base_link,,root,auto,27.218625,-27.708350,-102.202745,0.000000,0.000000,0.000000,root_x_forward_z_up

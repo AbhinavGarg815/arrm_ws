@@ -1,0 +1,55 @@
+# Velocity and acceleration bounds for MoveIt's time parameterisation (TOTG).
+# These decide how fast the planned trajectory is actually executed.
+#
+# Mirrors arm_description/config/joint_parameters.yaml, which is the source of
+# truth; MoveIt wants its own schema. test/test_limits_match.py fails the build
+# if the two drift apart.
+#
+# 40 deg/s is the speed at which following error stays inside the firmware's
+# FAULT_ERR_DEG watchdog given the measured 213 ms effective lag. Command the
+# arm faster and the Mega will relax the servo mid-move.
+
+default_velocity_scaling_factor: 0.3
+default_acceleration_scaling_factor: 0.3
+
+joint_limits:
+  # DS51150 joints (Mega 2560): 40 deg/s, 80 deg/s^2
+  joint1:
+    has_velocity_limits: true
+    max_velocity: 0.698132
+    has_acceleration_limits: true
+    max_acceleration: 1.396264
+  joint2:
+    has_velocity_limits: true
+    max_velocity: 0.698132
+    has_acceleration_limits: true
+    max_acceleration: 1.396264
+  joint3:
+    has_velocity_limits: true
+    max_velocity: 0.698132
+    has_acceleration_limits: true
+    max_acceleration: 1.396264
+
+  # ST3215 wrist joints (Waveshare ESP32): PROVISIONAL
+  joint4:
+    has_velocity_limits: true
+    max_velocity: 1.047198
+    has_acceleration_limits: true
+    max_acceleration: 2.094395
+  joint5:
+    has_velocity_limits: true
+    max_velocity: 1.047198
+    has_acceleration_limits: true
+    max_acceleration: 2.094395
+  joint6:
+    has_velocity_limits: true
+    max_velocity: 1.047198
+    has_acceleration_limits: true
+    max_acceleration: 2.094395
+
+  # Gripper
+  Slider_39:
+    has_velocity_limits: true
+    max_velocity: 0.02
+    has_acceleration_limits: true
+    max_acceleration: 0.1

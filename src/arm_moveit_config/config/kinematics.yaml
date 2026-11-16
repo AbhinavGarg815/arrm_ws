@@ -1,0 +1,35 @@
+# Inverse kinematics for the `arm` planning group.
+#
+# KDL was chosen by measurement. This arm has no exact spherical wrist (joint4
+# and joint5 intersect to 1.1 mm, joint5 and joint6 miss by 11.7 mm), and the
+# usual advice is that an offset wrist needs an optimiser. It does not here -
+# 60 random configurations, FK then IK seeded from `ready`:
+#
+#     solver                            solved   median    p95      max
+#     KDL,     timeout 0.5 s            100 %     4.0 ms   26 ms   128 ms
+#     KDL,     timeout 0.2 s             98 %     2.1 ms   42 ms    82 ms
+#     pick_ik, global, 0.2 s             92 %    10.0 ms  147 ms   169 ms
+#     pick_ik, global, 0.05 s            85 %     9.2 ms   33 ms    45 ms
+#
+# Six DOF and a short chain suit a Jacobian method. Reproduce before changing
+# this (needs move_group running):
+#     ros2 run arm_moveit_config ik_benchmark.py
+#
+# If pick_ik is ever revisited: enabling any cost-function weight means
+# cost_threshold must be raised above the floor those weights create.
+# A threshold of 0.001 with minimal_displacement_weight set rejects every valid
+# solution, including IK for a pose the arm is physically sitting in.
+
+arm:
+  kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+
+  # A per-call ceiling, not a per-call cost: the median solve is 4 ms, and 0.5 s
+  # is the difference between 98% and 100% on the benchmark above.
+  kinematics_solver_timeout: 0.5
+
+  kinematics_solver_search_resolution: 0.005
+
+# A single prismatic joint on a lead screw - no IK problem to solve.
+gripper:
+  kinematics_solver: ""
+  kinematics_solver_timeout: 0.05

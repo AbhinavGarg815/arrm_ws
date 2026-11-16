@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>arm_demos</name>
+  <version>0.1.0</version>
+  <description>
+    Minimal, dependency-light motion demos for the arm: plan to a named pose,
+    plan to a Cartesian goal pose, and report what happened. Talks to move_group
+    over the MoveGroup action directly rather than through moveit_py, which is
+    not packaged for Jazzy.
+  </description>
+  <maintainer email="abhinavgrg815@gmail.com">Abhinav Garg</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <!-- cartesian_to reads the tool's current pose from TF, because a Cartesian
+       path needs a full target pose and the sensible default for the orientation
+       is whatever the tool already has. -->
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>arm_moveit_config</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>ament_index_python</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

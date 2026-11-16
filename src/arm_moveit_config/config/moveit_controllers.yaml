@@ -1,0 +1,50 @@
+# How move_group hands a finished trajectory to ros2_control.
+#
+# The names here must match arm_description/config/ros2_controllers.yaml.
+# A mismatch is the most common reason a plan succeeds in RViz and nothing
+# moves: move_group finds no controller claiming the joints and reports
+# "Unable to identify any set of controllers".
+
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+moveit_simple_controller_manager:
+  controller_names:
+    - arm_controller
+    - gripper_controller
+
+  arm_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+      - joint6
+
+  gripper_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - Slider_39
+
+
+# Execution timing. move_group fails a trajectory that is not finished within
+# duration * scaling + margin, and the defaults (1.2, 0.5 s) are shorter than
+# this controller is entitled to take - a move that arrived within 0.05 deg was
+# reported as UNABLE_TO_AQUIRE_SENSOR_DATA.
+#
+# margin must exceed the controller's settle window (constraints.goal_time =
+# 2.0 s in ros2_controllers.yaml), which this arm needs because the joints
+# settle through up to 1.08 deg of backlash. scaling covers the hardware being
+# slower than the plan: the firmware caps itself at 40 deg/s.
+trajectory_execution:
+  allowed_execution_duration_scaling: 1.5
+  allowed_goal_duration_margin: 3.0
+  # How far the arm may already be from the trajectory's first point. The
+  # default 0.01 rad = 0.57 deg is inside this arm's backlash, so a good plan
+  # could be rejected for a deviation the hardware cannot avoid.
+  allowed_start_tolerance: 0.02

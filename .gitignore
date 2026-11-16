@@ -1,0 +1,21 @@
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

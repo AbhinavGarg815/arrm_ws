@@ -1,0 +1,125 @@
+# Single source of truth for joint limits.
+# Loaded by urdf/assemblies/arm_links.urdf.xacro, urdf/arm.urdf.xacro and
+# config/joint_limits.yaml. Never edit a limit directly in a .xacro.
+#
+# Provenance tags: [MEASURED] bench-verified, [PROVISIONAL] conservative guess,
+# [CAD] from the Fusion export, [HARNESS] set by cable length.
+# Units: rad, rad/s, N*m (prismatic: m, m/s, N).
+#
+# Margin rule: every limit sits at least (goal tolerance + 3 deg) inside the
+# nearest hard boundary - firmware soft limit, mechanical stop, or the ST3215
+# 0/4095 encoder seam. Enforced by arm_moveit_config/test/test_limits_match.py.
+# joint4 is exempt: its boundary is the harness and is not measurable.
+
+joints:
+
+  # DS51150 hobby servos, closed loop via Mega 2560 + pot tap.
+  # 266.5 deg full travel, +/-133 deg about centre.
+  # velocity 40 deg/s = MAX_VEL_DEG_S: the limit that keeps following error
+  # inside FAULT_ERR_DEG. Raising it trips the firmware watchdog mid-move.
+
+  joint1:                      # base / waist
+    lower: -2.007129           # -115 deg [MEASURED] firmware backstop -120, less 5
+    upper:  2.007129           # +115 deg [MEASURED] firmware backstop +120, less 5
+    velocity: 0.698132         #  40 deg/s [MEASURED] MAX_VEL_DEG_S
+    effort: 14.7               # 150 kg*cm [PROVISIONAL]
+    acceleration: 1.396264     #  80 deg/s^2 [MEASURED] MAX_ACC_DEG_S2
+
+  joint2:                      # shoulder
+    lower: -1.466077           #  -84 deg [MEASURED] structure/firmware -90, less 6
+    upper:  1.466077           #  +84 deg [MEASURED] structure/firmware +90, less 6
+    velocity: 0.698132         # [MEASURED]
+    effort: 14.7               # [PROVISIONAL]
+    acceleration: 1.396264     # [MEASURED]
+
+  joint3:                      # elbow
+    # Stops are asymmetric, measured with motor_test.py arm3-probe:
+    # free to +126.2 / -118.7, following lost at +126.6 / -119.7.
+    lower: -1.980949           # -113.5 deg [MEASURED] firmware backstop -119.5, less 6
+    upper:  2.103122           # +120.5 deg [MEASURED] firmware backstop +126.5, less 6
+    velocity: 0.698132         # [MEASURED]
+    effort: 14.7               # [PROVISIONAL]
+    acceleration: 1.396264     # [MEASURED]
+
+  # ST3215 serial-bus servos via Waveshare ESP32 board. 4096 counts/rev.
+
+  joint4:                      # wrist 1, roll about the forearm - ST3215 id 1
+    # HARNESS-LIMITED. Free travel is 359.5 deg (no mechanical stop); the cable
+    # snapped at ~150 deg. This limit CANNOT be found by rotating the joint -
+    # a bundle going taut gives no feel, and the encoder is single-turn so a
+    # full wind reads normal. Determine it from the service loop geometry.
+    # To raise it: fit a helical service loop first, then wrist_tune.py
+    # --limit-here 1, then re-run scripts/analyse_self_collision.py.
+    lower: -1.570796           #  -90 deg [HARNESS] cable length, not the mechanism
+    upper:  1.570796           #  +90 deg [HARNESS]
+    velocity: 1.047198         #  60 deg/s [PROVISIONAL] firmware caps at 79 deg/s
+    effort: 2.94               # 30 kg*cm [PROVISIONAL] ST3215 stall spec
+    acceleration: 2.094395     # 120 deg/s^2 [PROVISIONAL]
+
+  joint5:                      # wrist 2, pitch - ST3215 id 2
+    # Stops measured by hand, torque off: counts 1243..2623 = -50.5..+70.8 deg.
+    # The old +/-90 drove the servo into the stop; the stall browned out the bus.
+    lower: -0.785398           #  -45 deg [MEASURED] stop at -50.5, less 5
+    upper:  1.134464           #  +65 deg [MEASURED] stop at +70.8, less 5
+    velocity: 1.047198         # [PROVISIONAL]
+    effort: 2.94               # [PROVISIONAL]
+    acceleration: 2.094395     # [PROVISIONAL]
+
+  joint6:                      # wrist 3, roll at the tool flange - ST3215 id 3
+    # No mechanical stop (turns 358.5 deg by hand). The boundary is the
+    # single-turn encoder seam at +/-180 deg, and crossing it loses the joint.
+    # +/-170 = counts 114..3982, so 114 counts clear against ~23 of goal
+    # tolerance. Recompute if zero_counts or counts_per_rad change.
+    # Once the gripper is wired this limit must come down to the N20 lead
+    # slack; measure with wrist_tune.py --limit-here 3, never by probing.
+    lower: -2.967060           # -170 deg [MEASURED] seam at 180, less 10
+    upper:  2.967060           # +170 deg [MEASURED] seam at 180, less 10
+    velocity: 1.047198         # [PROVISIONAL]
+    effort: 2.94               # [PROVISIONAL]
+    acceleration: 2.094395     # [PROVISIONAL]
+
+  # Gripper: N20 12 V motor + lead screw via DRV8871. Range is entirely
+  # negative, straight from the CAD - the finger's zero is not the closed pose.
+  Slider_39:
+    lower: -0.065              # [CAD] -65 mm
+    upper: -0.010              # [CAD] -10 mm
+    velocity: 0.02             # 20 mm/s [PROVISIONAL]
+    effort: 20.0               # 20 N [PROVISIONAL]
+    acceleration: 0.1          # [PROVISIONAL]
+
+# Link material. The Fusion export carried generic steel, making the arm 24.94 kg;
+# the links are printed PLA/ABS. CAD values are kept as exported and scaled by
+# real/cad density in arm_links.urdf.xacro (mass and inertia are both linear in
+# density for fixed geometry). Planning ignores these; dynamics and gravity
+# compensation do not.
+materials:
+  cad_density: 7850.0        # kg/m^3, Fusion generic steel - what was exported
+  real_density: 600.0        # kg/m^3 [PROVISIONAL] printed, with infill.
+                             # Settle it by weighing one printed link.
+
+# Base mounting. The export leaves base_link in the CAD frame, with the waist
+# axis along +Y. These values re-seat the robot upright on z=0 without touching
+# a mesh or joint origin: rotation maps joint1 -> world +Z and joint2 -> world
+# -Y, z is the lowest point of the collision mesh, x/y put the waist axis on
+# the world Z axis, and the yaw turns +X into the direction the arm reaches.
+base_mount:
+  xyz: [0.1967, 0.0911, 0.0790]
+  rpy: [1.579828, 0.017766, -1.495452]
+
+# Joint zero offsets - RECORD ONLY. Already baked into the joint <origin> rpy
+# values in arm_links.urdf.xacro and arm.urdf.xacro; kept here so the change is
+# traceable. The export put q=0 at a bent CAD pose; these rotate each joint's
+# zero (new_origin = cad_origin * Rz(offset)) so home is the arm upright.
+# Solved by least squares, residual 0.07 deg off vertical, tool at z = 0.972 m.
+#
+# This asserts that servo mid-travel equals the arm standing upright, which is a
+# claim about how the horns are mounted. If the built arm is not upright at
+# mid-travel, change these offsets and shift the limits by the same amount -
+# do not edit the xacro.
+zero_offsets_rad:
+  joint1:  0.000000      #    0.000 deg
+  joint2:  0.690628      #   39.570 deg
+  joint3:  1.730994      #   99.179 deg
+  joint4: -1.771807      # -101.517 deg
+  joint5:  1.235566      #   70.793 deg
+  joint6:  0.014331      #    0.821 deg

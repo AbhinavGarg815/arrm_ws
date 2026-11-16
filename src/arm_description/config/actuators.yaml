@@ -1,0 +1,104 @@
+# How each URDF joint maps onto a physical motor.
+# Read by the arm_hardware ros2_control interface. The URDF describes the
+# mechanism; this file describes the wiring and the motor's own convention:
+#
+#   q_urdf = direction * (motor_angle - motor_angle_at_zero)
+#
+# A reversed direction is fixed HERE, never by flipping an axis in the URDF -
+# that would break the geometry, the collision matrix and every named pose.
+# Established with tools/motor_test.py: move one motor a known amount and
+# observe which joint moved and which way.
+#
+# status: VERIFIED = motion observed and matched the URDF prediction.
+#         CALIBRATED = direction and zero both established.
+#         PENDING = not yet tested on the arm.
+
+joints:
+
+  # DS51150 on Arduino Mega 2560, closed loop on the pot.
+  # motor_angle is degrees, 0 = servo mid-travel (CAL_US_AT_ZERO = 1500 us).
+  #
+  # Wiring note: PWM pins match the docs (base D9, shoulder D10, elbow D11) but
+  # the pot cables are rotated one position on the sensing board's J1/J2/J3:
+  # base pot on 0x4A, shoulder on 0x48, elbow on 0x49. Every pot-rail
+  # fingerprint matches once read this way. The wiring stays as built.
+
+  joint1:
+    board: mega
+    channel: 1                     # firmware joint index (1 base, 2 shoulder, 3 elbow)
+    pwm_pin: 9
+    ads1115: 0x4A                  # not 0x48 as documented; rail 26543 = servo #1
+    direction: 1                   # +servo angle turns the base counter-clockwise
+                                   # from above, matching URDF +q1
+    motor_angle_at_zero_deg: 0.0   # PROVISIONAL: assumes mid-travel is the URDF zero
+    status: VERIFIED               # pin, pot and direction; zero provisional
+
+  joint2:
+    board: mega
+    channel: 2
+    pwm_pin: 10
+    ads1115: 0x48                  # rail 26576 = servo #2
+    direction: 1                   # +servo angle tilts the arm backward, as URDF +q2
+    motor_angle_at_zero_deg: 0.0   # PROVISIONAL
+    status: VERIFIED
+
+  joint3:
+    board: mega
+    channel: 3
+    pwm_pin: 11
+    ads1115: 0x49                  # rail 26361 = servo #3
+    direction: 1                   # +servo angle swings the tool forward, as URDF +q3
+    motor_angle_at_zero_deg: 0.0   # PROVISIONAL
+    status: VERIFIED
+    # Under load, feedforward alone stalls in a ~2 deg band - this joint needs
+    # the firmware's PI term to move at all for small commands.
+
+  # ST3215 on the Waveshare ESP32 driver board, 1 Mbaud bus.
+  # motor_angle is servo counts, 4096 per revolution, 2048 = mid-travel.
+
+  joint4:
+    board: esp32
+    servo_id: 1
+    direction: -1                  # rising counts turn the wrist clockwise from
+                                   # above; URDF +q4 is counter-clockwise
+    counts_per_rad: 651.899        # 4096 / (2 pi)
+    motor_counts_at_zero: 2048     # servo mid-travel
+    status: VERIFIED
+
+  joint5:
+    board: esp32
+    servo_id: 2
+    direction: -1                  # rising counts tip the gripper to the robot's
+                                   # right; URDF +q5 tips it left
+    counts_per_rad: 651.899
+    motor_counts_at_zero: 2048     # servo mid-travel (read 2046)
+    status: VERIFIED
+
+  joint6:
+    board: esp32
+    servo_id: 3
+    direction: -1                  # Checked against the model, not just by eye:
+                                   # at home, joint6's axis is [-0.020 -0.033
+                                   # +0.999] in world frame, so URDF +q6 is
+                                   # counter-clockwise from above while rising
+                                   # counts turn the tool clockwise.
+    counts_per_rad: 651.899
+    motor_counts_at_zero: 2048     # The arm was reassembled from the centred
+                                   # state (motor_test.py center-all), so every
+                                   # link went on at mid-travel and upright IS
+                                   # motor-zero. Replaces 1629, which was this
+                                   # joint's zero when the gripper was mounted at
+                                   # an arbitrary angle and cost 419 counts of
+                                   # travel on one side.
+                                   # If the gripper is remounted: centre first,
+                                   # then mount, rather than calibrating after.
+    status: CALIBRATED
+
+  # Gripper: N20 + lead screw via DRV8871. Not built - no driver, no feedback.
+  # Stays in loopback (state follows command) so the rest of the stack behaves
+  # as it will once the hardware exists.
+  Slider_39:
+    board: none
+    direction: 1
+    motor_angle_at_zero_deg: 0.0
+    status: PENDING

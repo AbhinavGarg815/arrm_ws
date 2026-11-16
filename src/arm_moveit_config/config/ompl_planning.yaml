@@ -1,0 +1,52 @@
+# Sampling-based planners for the `arm` group.
+#
+# RRTConnect is the default: it is bidirectional, and with only 8 links and no
+# clutter a bidirectional tree finds a path in milliseconds.
+#
+# OMPL returns a collision-free path through configuration space. It says
+# nothing about whether the arm can hold that path under gravity, or about
+# servo accuracy - those live in the joint limits and the firmware.
+
+planning_plugins:
+  - ompl_interface/OMPLPlanner
+
+request_adapters:
+  - default_planning_request_adapters/ResolveConstraintFrames
+  - default_planning_request_adapters/ValidateWorkspaceBounds
+  - default_planning_request_adapters/CheckStartStateBounds
+  - default_planning_request_adapters/CheckStartStateCollision
+
+response_adapters:
+  - default_planning_response_adapters/AddTimeOptimalParameterization
+  - default_planning_response_adapters/ValidateSolution
+  - default_planning_response_adapters/DisplayMotionPath
+
+# longest_valid_segment_fraction below is halved from the default 0.01, which
+# was tuned for much larger arms: it costs little and stops the planner
+# stepping through a thin link.
+planner_configs:
+  RRTConnectkConfigDefault:
+    type: geometric::RRTConnect
+    range: 0.0        # 0 = let OMPL size the step from the state space
+  RRTstarkConfigDefault:
+    type: geometric::RRTstar
+    range: 0.0
+    goal_bias: 0.05
+    delay_collision_checking: 1
+  PRMkConfigDefault:
+    type: geometric::PRM
+    max_nearest_neighbors: 10
+
+arm:
+  planner_configs:
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - PRMkConfigDefault
+  default_planner_config: RRTConnectkConfigDefault
+  longest_valid_segment_fraction: 0.005
+  projection_evaluator: joints(joint1,joint2)
+
+gripper:
+  planner_configs:
+    - RRTConnectkConfigDefault
+  default_planner_config: RRTConnectkConfigDefault

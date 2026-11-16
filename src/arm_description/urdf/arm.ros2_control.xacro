@@ -1,0 +1,118 @@
+<?xml version="1.0"?>
+<!-- The hardware abstraction: one <ros2_control> component covering all 7
+     joints, replacing the two blocks the exporter generated (which shared a
+     name and between them covered only 5 joints).
+
+     MoveIt, the controllers and every demo above this are identical whether
+     motion goes to mock hardware or to the real boards - only
+     `use_mock_hardware` changes:
+       true   mock_components/GenericSystem, commands echoed back as state.
+              No serial port, no firmware, no risk. Use for all planner work.
+       false  arm_hardware/ArmSystemHardware, talking to the Mega (3x DS51150
+              with pot feedback) and the ESP32 board (3x ST3215).
+
+     Position is the only command interface, deliberately: both actuator
+     families take a position target and close their own loop around it - the
+     Mega runs a 200 Hz cascade against the pot feedback, and an ST3215 has its
+     own internal encoder loop. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="arm_ros2_control"
+               params="name prefix use_mock_hardware use_fake_gripper mega_port esp32_port">
+
+    <xacro:property name="params"
+                    value="${xacro.load_yaml('$(find arm_description)/config/joint_parameters.yaml')}"/>
+    <xacro:property name="jp" value="${params['joints']}"/>
+    <!-- Which board, which channel, which way round, and where zero is. One
+         source of truth, established on the arm - see actuators.yaml. -->
+    <xacro:property name="act"
+                    value="${xacro.load_yaml('$(find arm_description)/config/actuators.yaml')['joints']}"/>
+
+    <!-- A joint's <state_interface> initial_value is what the loopback reports
+         before any command arrives. 0.0 is inside every limit, so the robot
+         starts at a legal configuration rather than one the planner rejects.
+         The gripper is the exception: its range is entirely negative, so 0.0
+         would be out of limits. It starts open (-0.065). -->
+    <xacro:macro name="position_joint" params="joint_name initial:=0.0">
+      <xacro:property name="a" value="${act[joint_name.replace(prefix,'')]}"/>
+      <joint name="${joint_name}">
+        <!-- Read by arm_hardware. The mock plugin ignores them, so the same
+             block serves both. Only the gripper is loopback now: it has no
+             hardware at all. The Mega speaks degrees, the ESP32 counts. -->
+        <param name="board">${a['board'] if a['board'] in ['mega','esp32'] else 'loopback'}</param>
+        <param name="channel">${a.get('channel', 0)}</param>
+        <param name="servo_id">${a.get('servo_id', 0)}</param>
+        <param name="direction">${a['direction'] if a['direction'] is not None else 1}</param>
+        <param name="zero_deg">${a.get('motor_angle_at_zero_deg', 0.0)}</param>
+        <param name="zero_counts">${a.get('motor_counts_at_zero', 2048)}</param>
+        <param name="counts_per_rad">${a.get('counts_per_rad', 651.899)}</param>
+        <command_interface name="position">
+          <param name="min">${jp[joint_name.replace(prefix,'')]['lower']}</param>
+          <param name="max">${jp[joint_name.replace(prefix,'')]['upper']}</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+    </xacro:macro>
+
+    <ros2_control name="${name}" type="system">
+
+      <hardware>
+        <xacro:if value="${use_mock_hardware in ['true','True',True]}">
+          <plugin>mock_components/GenericSystem</plugin>
+          <!-- Derive velocity/acceleration state from the commanded position,
+               so JointTrajectoryController sees a velocity interface and the
+               mock behaves like the real thing as far as the controller can
+               tell. Without this the velocity state is always zero. -->
+          <param name="calculate_dynamics">true</param>
+        </xacro:if>
+
+        <xacro:unless value="${use_mock_hardware in ['true','True',True]}">
+          <plugin>arm_hardware/ArmSystemHardware</plugin>
+
+          <!-- Mega 2560: joints 1-3 (DS51150 + pot feedback).
+               250000 baud is an exact divisor of the ATmega2560's 16 MHz clock
+               (0.0% error); 115200 is 2.1% off. The firmware already uses it. -->
+          <param name="mega_port">${mega_port}</param>
+          <param name="mega_baud">250000</param>
+
+          <!-- Waveshare ESP32 servo driver: joints 4-6 (ST3215 ids 1/2/3). -->
+          <param name="esp32_port">${esp32_port}</param>
+          <param name="esp32_baud">115200</param>
+
+          <!-- Refuse to activate if either board does not answer within this
+               many milliseconds. A hardware interface that silently activates
+               with a dead link is the worst possible failure: the controller
+               reports success while nothing moves. -->
+          <param name="handshake_timeout_ms">2000</param>
+
+          <!-- The gripper is not built yet (N20 + DRV8871 + INA219 planned).
+               Keep it on loopback so the rest of the arm can run for real. -->
+          <param name="fake_gripper">${use_fake_gripper}</param>
+        </xacro:unless>
+      </hardware>
+
+      <!-- DS51150 joints, Mega 2560 -->
+      <xacro:position_joint joint_name="${prefix}joint1"/>
+      <xacro:position_joint joint_name="${prefix}joint2"/>
+      <xacro:position_joint joint_name="${prefix}joint3"/>
+
+      <!-- ST3215 wrist joints, Waveshare ESP32 board -->
+      <xacro:position_joint joint_name="${prefix}joint4"/>
+      <xacro:position_joint joint_name="${prefix}joint5"/>
+      <xacro:position_joint joint_name="${prefix}joint6"/>
+
+      <!-- Gripper. 0.0 is outside its limits so a value must be chosen, and
+           the choice is MoveIt's: for a joint whose range excludes zero a
+           default robot state takes the midpoint, (-0.065 + -0.010) / 2.
+           Matching it keeps the live robot and the orange goal robot showing the
+           same gripper. Stops mattering once the gripper reports a position. -->
+      <xacro:position_joint joint_name="${prefix}Slider_39" initial="-0.0375"/>
+
+    </ros2_control>
+
+  </xacro:macro>
+
+</robot>

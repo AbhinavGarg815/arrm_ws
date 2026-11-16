@@ -1,0 +1,10 @@
+<library path="arm_hardware">
+  <class name="arm_hardware/ArmSystemHardware"
+         type="arm_hardware::ArmSystemHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Drives the arm's three DS51150 joints through the Mega's arm3 firmware.
+      Wrist and gripper joints run in loopback until their firmware exists.
+    </description>
+  </class>
+</library>

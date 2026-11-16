@@ -1,0 +1,8 @@
+# Cartesian limits for the Pilz industrial motion planner (LIN / CIRC / PTP).
+# OMPL ignores this file. 0.15 m/s is deliberately slow: at the arm's 40 deg/s
+# joint limit a 0.5 m reach gives roughly 0.35 m/s.
+cartesian_limits:
+  max_trans_vel: 0.15
+  max_trans_acc: 0.4
+  max_trans_dec: -0.4
+  max_rot_vel: 0.7

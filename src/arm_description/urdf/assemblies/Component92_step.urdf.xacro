@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="Component92_step_macro">
+
+  <!-- Same density correction as arm_links.urdf.xacro: the Fusion export assumed
+       steel and this link is printed plastic. Defined again here rather than
+       relied upon from the other file, because that would make the numbers depend
+       on include order. See `materials` in config/joint_parameters.yaml. -->
+  <xacro:property name="mat"
+                  value="${xacro.load_yaml('$(find arm_description)/config/joint_parameters.yaml')['materials']}"/>
+  <xacro:property name="inertia_scale" value="${mat['real_density'] / mat['cad_density']}"/>
+
+  <xacro:macro name="Component92_step" params="prefix">
+
+    <!-- Links -->
+    <link name="${prefix}Link6_Gripper">
+      <inertial>
+        <origin xyz="-0.001797 0.021410 0.038281" rpy="0 0 0"/>
+        <mass value="${0.608507 * inertia_scale}"/>
+        <inertia ixx="${1.559651e-03 * inertia_scale}" ixy="${5.340033e-05 * inertia_scale}" ixz="${1.297126e-05 * inertia_scale}"
+                 iyy="${5.597430e-04 * inertia_scale}" iyz="${-1.690105e-04 * inertia_scale}" izz="${1.088156e-03 * inertia_scale}"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.051083 -0.075240 -0.311314" rpy="-2.845925 0.111819 -1.356277"/>
+        <geometry>
+          <mesh filename="package://arm_description/meshes/Component92_step/Link6_Gripper.dae" scale="1 1 1"/>
+        </geometry>
+        <material name="Steel"/>
+      </visual>
+      <collision>
+        <origin xyz="0.051083 -0.075240 -0.311314" rpy="-2.845925 0.111819 -1.356277"/>
+        <geometry>
+          <mesh filename="package://arm_description/meshes/Component92_step/Link6_Gripper_convex.stl" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+
+  </xacro:macro>
+
+</robot>
